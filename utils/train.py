@@ -4,10 +4,12 @@ from IPython.display import display, clear_output
 from plotly.subplots import make_subplots
 from sklearn.metrics import f1_score
 from tqdm import tqdm
+import gc
+from torch.cuda.amp import autocast, GradScaler
 
 
 class Trainer:
-    def __init__(self, model, train_dataloader, val_dataloader, optimizer, criterion, num_epochs, device,
+    def __init__(self, model, train_dataloader, val_dataloader, optimizer, criterion, scheduler, num_epochs, device,
                  enable_visualization=True, is_jupyter=True):
         """
         初始化训练器类
@@ -27,6 +29,7 @@ class Trainer:
         self.val_dataloader = val_dataloader
         self.optimizer = optimizer
         self.criterion = criterion
+        self.scheduler = scheduler
         self.num_epochs = num_epochs
 
         self.best_f1 = 0
@@ -44,11 +47,13 @@ class Trainer:
             for batch in self.val_dataloader:
                 input_ids = batch['input_ids'].to(self.device)
                 attention_mask = batch['attention_mask'].to(self.device)
+                ocrinput_ids = batch['ocrinput_ids'].to(self.device)
+                ocrattention_mask = batch['ocrattention_mask'].to(self.device)
                 images = batch['images'].to(self.device)
                 labels = batch['label'].to(self.device)
 
                 # 预测
-                outputs = self.model(input_ids, attention_mask, images)
+                outputs = self.model(input_ids, attention_mask, ocrinput_ids, ocrattention_mask, images)
                 _, preds = torch.max(outputs, dim=1)
 
                 all_labels.extend(labels.cpu().numpy())
@@ -97,11 +102,13 @@ class Trainer:
             for i, batch in enumerate(self.train_dataloader):
                 input_ids = batch['input_ids'].to(self.device)
                 attention_mask = batch['attention_mask'].to(self.device)
+                ocrinput_ids = batch['ocrinput_ids'].to(self.device)
+                ocrattention_mask = batch['ocrattention_mask'].to(self.device)
                 images = batch['images'].to(self.device)
                 labels = batch['label'].to(self.device)
 
                 self.optimizer.zero_grad()
-                outputs = self.model(input_ids, attention_mask, images)
+                outputs = self.model(input_ids, attention_mask, ocrinput_ids, ocrattention_mask, images)
                 loss = self.criterion(outputs, labels)
 
                 loss.backward()
@@ -111,19 +118,25 @@ class Trainer:
                 avg_loss = total_loss / (i + 1)
                 self.loss_list.append(avg_loss)
 
-                if self.enable_visualization:
+                if self.enable_visualization and i % 100 == 0:
                     self.update_visualization()
 
                 pbar.set_postfix({'Loss': f'{avg_loss:.4f}', 'F1': f'{self.f1_list[-1] if self.f1_list else 0:.4f}'})
                 pbar.update(1)
 
+            self.scheduler.step()
             f1 = self.evaluate()
             self.f1_list.append(f1)
-
+            
             torch.save(self.model.state_dict(), './save/last_model.pth')
 
             if f1 > self.best_f1:
                 self.best_f1 = f1
                 torch.save(self.model.state_dict(), './save/best_model.pth')
 
+            if self.enable_visualization:
+                self.update_visualization()
+        
+        torch.cuda.empty_cache()
+        gc.collect()
         pbar.close()

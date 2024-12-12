@@ -6,18 +6,23 @@ from torch.utils.data import Dataset
 from PIL import Image
 from torchvision import transforms
 import torch.nn.functional as F
+import jieba
+import logging
+
+logging.getLogger('jieba').setLevel(logging.ERROR)
+
 
 class MultiModalDataset(Dataset):
-    def __init__(self, csv_file, img_dir, tokenizer, max_len=256, transform=None):
+    def __init__(self, excel_file, img_dir, tokenizer, max_len=512, transform=None):
         """
         Args:
-            csv_file (string): 数据集文件路径 (CSV文件)
+            excel_file (string): 数据集文件路径 (XLSX文件)
             img_dir (string): 图像文件夹路径
             tokenizer: 用于文本处理的预训练模型的tokenizer
             max_len (int): 文本最大长度
             transform: 图像变换操作（可选）
         """
-        self.data = pd.read_csv(csv_file)
+        self.data = pd.read_excel(excel_file)
         self.img_dir = img_dir
         self.tokenizer = tokenizer
         self.max_len = max_len
@@ -32,6 +37,7 @@ class MultiModalDataset(Dataset):
         # 获取数据项
         item = self.data.iloc[idx]
         text = item['text']
+        ocr = item['image_text']
         label = torch.tensor(item['label'], dtype=torch.long)
         
         # 文本处理：tokenization + padding
@@ -39,6 +45,11 @@ class MultiModalDataset(Dataset):
         input_ids = encoding['input_ids'].squeeze(0) 
         attention_mask = encoding['attention_mask'].squeeze(0)
 
+        ocrencoding = self.tokenizer(ocr, truncation=True, padding='max_length', max_length=self.max_len, return_tensors='pt')
+        ocrinput_ids = ocrencoding['input_ids'].squeeze(0) 
+        ocrattention_mask = ocrencoding['attention_mask'].squeeze(0)
+
+        
         # 图像处理
         images_list = item['images_list'].split('\t') if pd.notna(item['images_list']) else []
         images = []
@@ -71,6 +82,9 @@ class MultiModalDataset(Dataset):
         return {
             'input_ids': input_ids,
             'attention_mask': attention_mask,
+            'ocrinput_ids': ocrinput_ids,
+            'ocrattention_mask': ocrattention_mask,
             'images': images,
             'label': label
         }
+
