@@ -66,17 +66,11 @@ project
 
 ## 使用方法
 
-### 1. 环境配置
-安装依赖：
-```bash
-pip install -r requirements.txt
-```
-
-### 2. 数据准备
-将数据集放入 `data` 目录，确保文件结构符合预期。
+### 1. 数据准备
+将数据集整合成指定格式后放入 `data` 目录，确保文件结构符合预期。（图像数据整理到`/data/images`中，表格整理成train.xlsx和test.xlsx置于`/data`中）
 
 ### 3. 训练模型
-进入 `train/scheme2` 目录，运行 `main.ipynb` 完成训练。
+进入 `train/scheme` 目录，运行 `main.ipynb` 完成训练。
 
 ### 4. 模型评估
 通过保存的 `best_model.pth` 进行推理测试。
