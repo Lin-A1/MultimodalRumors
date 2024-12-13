@@ -79,7 +79,7 @@ project
 ## 结果展示
 - **F1 Score**: 0.9554
 - **排名**: 第 1 名
-
+![模型评估图表](model_evaluation_plots.png)
 ---
 
 ## 欢迎交流与贡献
