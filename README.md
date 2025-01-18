@@ -34,7 +34,7 @@ project
 2. **配图**：与谣言文本相关的图像数据。
 3. **OCR 文本**：通过 [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) 从配图中提取的文字信息。
 
-链接：https://pan.baidu.com/s/1XH7YQGjXkjTZ9RYf7bVhmQ?pwd=2205 
+链接:https://pan.baidu.com/s/1XH7YQGjXkjTZ9RYf7bVhmQ?pwd=2205 
 提取码：2205 
 
 ps：ocr.csv后缀的是通过ocr提取过特征的
